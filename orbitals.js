@@ -91,18 +91,31 @@ const orbitals = (function() {
     }
 
     function genTable(trs, sublevel, fullBorder) {
-        const table = document.createElement("table");
-        const styles = ["display: inline-table", "margin: 0 4px"];
-        if (fullBorder) {
-            styles.push("border-collapse: collapse");
-        }
+        const wrapper = document.createElement("div");
+        const wrapperStyles = ["padding: 6px 0;"];
         if (sublevel) {
-            styles.push(...["position: relative", `top: -${offsets[sublevel] || 0}em`]);
+            wrapperStyles.push(
+                ...[
+                    "position: relative",
+                    `top: -${offsets[sublevel] || 0}em`,
+                    `margin-top: -${(offsets[sublevel] || 0) * 4}px;`,
+                    `padding-bottom: ${(offsets[sublevel] || 0) * 4}px;`,
+                ]
+            );
         }
+        wrapper.style = wrapperStyles.join("; ");
 
-        table.style = styles.join("; ");
+        const table = document.createElement("table");
+        const tableStyles = ["display: inline-table", "margin: 0 4px"];
+        if (fullBorder) {
+            tableStyles.push("border-collapse: collapse");
+        }
+        table.style = tableStyles.join("; ");
+
         trs.forEach((tr) => table.appendChild(tr));
-        return table;
+        wrapper.appendChild(table);
+
+        return wrapper;
     }
 
     function genTr(tds) {
@@ -133,7 +146,7 @@ const orbitals = (function() {
         if (!sublevels) return;
         const size = sublevelsSize(sublevels);
         const wrapper = document.createElement("div");
-        wrapper.style = "white-space: nowrap;";
+        wrapper.style = "display: flex; white-space: nowrap; padding-bottom: 10px;";
         ["s", "p", "d", "f"].slice(0, size).forEach((sublevel) => {
             const values = sublevels[sublevel];
             const title = genTd(`${level}${sublevel}`, false, fullBorder, boxes[sublevel]);
