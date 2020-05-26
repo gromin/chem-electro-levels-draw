@@ -1,6 +1,12 @@
 const orbitals = (function() {
     const boxes = { s: 1, p: 3, d: 5, f: 7 };
-    const offsets = { s: 0, p: 2, d: 4, f: 6 };
+    const offsetsGrid1 = { s: 0, p: 2, d: 4, f: 6 };
+    const offsetsGrid2 = {
+        1: { s: 0, p: 0, d: 0, f: 0 },
+        2: { s: 0, p: 2, d: 0, f: 2 },
+        3: { s: 0, p: 4, d: 2, f: 0 },
+        4: { s: 0, p: 6, d: 4, f: 2 },
+    };
 
     function parse(s) {
         const sublevelsCount = (l, type) => {
@@ -90,19 +96,18 @@ const orbitals = (function() {
         return "&nbsp;";
     }
 
-    function genTable(trs, sublevel, fullBorder) {
+    function genTable(trs, sublevel, sublevels, fullBorder) {
+        const offsets = fullBorder ? offsetsGrid1 : offsetsGrid2[Object.keys(sublevels).length];
         const wrapper = document.createElement("div");
-        const wrapperStyles = ["padding: 6px 0;"];
-        if (sublevel) {
-            wrapperStyles.push(
-                ...[
-                    "position: relative",
-                    `top: -${offsets[sublevel] || 0}em`,
-                    `margin-top: -${(offsets[sublevel] || 0) * 4}px;`,
-                    `padding-bottom: ${(offsets[sublevel] || 0) * 4}px;`,
-                ]
-            );
-        }
+        const wrapperStyles = [fullBorder ? "padding: 6px 0" : ""];
+        wrapperStyles.push(
+            ...[
+                "position: relative",
+                `top: -${offsets[sublevel] || 0}em`,
+                fullBorder ? `margin-top: -${(offsets[sublevel] || 0) * 4}px` : "",
+                fullBorder ? `padding-bottom: ${(offsets[sublevel] || 0) * 4}px` : ``,
+            ]
+        );
         wrapper.style = wrapperStyles.join("; ");
 
         const table = document.createElement("table");
@@ -124,7 +129,7 @@ const orbitals = (function() {
         return tr;
     }
 
-    function genTd(text, border, fullBorder, colspan) {
+    function genTd(text, border, fullBorder, colspan, invisibleBorder) {
         const td = document.createElement("td");
         td.innerHTML = text;
         if (colspan && colspan !== 1) {
@@ -136,25 +141,51 @@ const orbitals = (function() {
             styles = styles.concat(
                 fullBorder ? ["border: 1px solid"] : ["border-bottom: 1px solid"]
             );
+            styles = styles.concat(invisibleBorder ? ["border-color: transparent"] : []);
         }
         td.style = styles.join("; ");
         return td;
     }
 
-    function genLevel(structure, level, fullBorder) {
-        const sublevels = structure[level];
+    function genLevel(level, sublevels, elevation, fullBorder) {
         if (!sublevels) return;
         const size = sublevelsSize(sublevels);
+        if (size === 0) {
+            return document.createElement("div");
+        }
         const wrapper = document.createElement("div");
-        wrapper.style = "display: flex; white-space: nowrap; padding-bottom: 10px;";
+        wrapper.style = `display: flex; white-space: nowrap; padding-bottom: 10px; padding-top: ${
+            !fullBorder ? elevation : 0
+        }em;`;
         ["s", "p", "d", "f"].slice(0, size).forEach((sublevel) => {
             const values = sublevels[sublevel];
-            const title = genTd(`${level}${sublevel}`, false, fullBorder, boxes[sublevel]);
+            let levelTitle = level;
+            if (!fullBorder && sublevel === "f") {
+                levelTitle = level - 2;
+            } else if (!fullBorder && sublevel === "d") {
+                levelTitle = level - 1;
+            }
+            const title = genTd(`${levelTitle}${sublevel}`, false, fullBorder, boxes[sublevel]);
             const orbitals = [];
             for (let i = 0; i < boxes[sublevel]; i++) {
                 orbitals.push(genTd(numToArrows((values && values[i]) || 0), true, fullBorder));
             }
-            wrapper.appendChild(genTable([genTr(orbitals), genTr([title])], sublevel, fullBorder));
+            wrapper.appendChild(
+                !!sublevels[sublevel]
+                    ? genTable([genTr(orbitals), genTr([title])], sublevel, sublevels, fullBorder)
+                    : genTable(
+                          [
+                              genTr(
+                                  [...Array(boxes[sublevel])].map(() =>
+                                      genTd("&nbsp;", true, fullBorder, undefined, true)
+                                  )
+                              ),
+                          ],
+                          sublevel,
+                          sublevels,
+                          fullBorder
+                      )
+            );
         });
         return wrapper;
     }
@@ -172,16 +203,43 @@ const orbitals = (function() {
             return maxSize >= acc ? maxSize : Math.max(maxSize, acc - maxSize - 2);
         }, 0);
 
-        if (elevation > 0) {
+        if (elevation > 0 && type === "grid1") {
             wrapper2.style = `padding-top: ${elevation * 2}em;`;
         }
 
-        for (let i = 9; i > 0; i--) {
-            if (!structure[i]) {
-                continue;
+        const maxLevel = Math.max(...Object.keys(structure));
+
+        const fakeRows =
+            type === "grid2"
+                ? [
+                      [[], maxLevel + 1],
+                      [[], maxLevel + 2],
+                  ]
+                : [];
+
+        const rows = Object.keys(structure)
+            .map((k) => [structure[k], k])
+            .concat(fakeRows)
+            .reverse();
+
+        rows.forEach(([rowSublevels, level], i) => {
+            if (type === "grid1") {
+                wrapper2.appendChild(genLevel(level, rowSublevels, 0, true));
+            } else {
+                const sublevels =
+                    level <= maxLevel ? { s: rowSublevels["s"], p: rowSublevels["p"] } : {};
+                let elevation = 0;
+                if (rows[i + 1] && rows[i + 1][0]["d"]) {
+                    sublevels["d"] = rows[i + 1][0]["d"];
+                    if (level <= maxLevel) elevation = 1;
+                }
+                if (rows[i + 2] && rows[i + 2][0]["f"]) {
+                    sublevels["f"] = rows[i + 2][0]["f"];
+                    if (level <= maxLevel) elevation = 3;
+                }
+                wrapper2.appendChild(genLevel(level, sublevels, elevation, false));
             }
-            wrapper2.appendChild(genLevel(structure, i, type === "grid1"));
-        }
+        });
 
         wrapper1.appendChild(wrapper2);
         return wrapper1;
