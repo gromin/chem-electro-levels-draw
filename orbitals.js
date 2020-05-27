@@ -129,14 +129,19 @@ const orbitals = (function() {
         return tr;
     }
 
-    function genTd(text, border, fullBorder, colspan, invisibleBorder) {
+    function genTd(text, size, border, fullBorder, colspan, invisibleBorder) {
         const td = document.createElement("td");
         td.innerHTML = text;
         if (colspan && colspan !== 1) {
             td.colSpan = colspan;
         }
 
-        let styles = ["min-width: 2em", "height: 2em", "text-align: center"];
+        let styles = [
+            "min-width: 2em",
+            "height: 2em",
+            "text-align: center",
+            `font-size: ${size}em`,
+        ];
         if (border) {
             styles = styles.concat(
                 fullBorder ? ["border: 1px solid"] : ["border-bottom: 1px solid"]
@@ -163,10 +168,12 @@ const orbitals = (function() {
             } else if (!fullBorder && sublevel === "d") {
                 levelTitle = level - 1;
             }
-            const title = genTd(`${levelTitle}${sublevel}`, false, fullBorder, boxes[sublevel]);
+            const title = genTd(`${levelTitle}${sublevel}`, 1, false, fullBorder, boxes[sublevel]);
             const orbitals = [];
             for (let i = 0; i < boxes[sublevel]; i++) {
-                orbitals.push(genTd(numToArrows((values && values[i]) || 0), true, fullBorder));
+                orbitals.push(
+                    genTd(numToArrows((values && values[i]) || 0), 1.2, true, fullBorder)
+                );
             }
             wrapper.appendChild(
                 !!sublevels[sublevel]
@@ -175,7 +182,7 @@ const orbitals = (function() {
                           [
                               genTr(
                                   [...Array(boxes[sublevel])].map(() =>
-                                      genTd("&nbsp;", true, fullBorder, undefined, true)
+                                      genTd("&nbsp;", 1.2, true, fullBorder, undefined, true)
                                   )
                               ),
                           ],
