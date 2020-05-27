@@ -154,9 +154,7 @@ const orbitals = (function() {
             return document.createElement("div");
         }
         const wrapper = document.createElement("div");
-        wrapper.style = `display: flex; white-space: nowrap; padding-bottom: 10px; padding-top: ${
-            !fullBorder ? elevation : 0
-        }em;`;
+        wrapper.style = `display: flex; white-space: nowrap; padding-bottom: 10px; padding-top: ${elevation}em;`;
         ["s", "p", "d", "f"].slice(0, size).forEach((sublevel) => {
             const values = sublevels[sublevel];
             let levelTitle = level;
@@ -204,7 +202,7 @@ const orbitals = (function() {
         }, 0);
 
         if (elevation > 0 && type === "grid1") {
-            wrapper2.style = `padding-top: ${elevation * 2}em;`;
+            wrapper2.style = `padding-top: ${elevation * 2 + 2}em;`;
         }
 
         const maxLevel = Math.max(...Object.keys(structure));
@@ -224,7 +222,9 @@ const orbitals = (function() {
 
         rows.forEach(([rowSublevels, level], i) => {
             if (type === "grid1") {
-                wrapper2.appendChild(genLevel(level, rowSublevels, 0, true));
+                wrapper2.appendChild(
+                    genLevel(level, rowSublevels, i === 0 || i === rows.length - 1 ? 0 : 2, true)
+                );
             } else {
                 const sublevels =
                     level <= maxLevel ? { s: rowSublevels["s"], p: rowSublevels["p"] } : {};
