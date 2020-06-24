@@ -152,7 +152,7 @@ const orbitals = (function() {
         return td;
     }
 
-    function genLevel(level, sublevels, elevation, fullBorder) {
+    function genLevel(level, sublevels, elevation, fullBorder, sublevelTitles) {
         if (!sublevels) return;
         const size = sublevelsSize(sublevels);
         if (size === 0) {
@@ -163,10 +163,8 @@ const orbitals = (function() {
         ["s", "p", "d", "f"].slice(0, size).forEach((sublevel) => {
             const values = sublevels[sublevel];
             let levelTitle = level;
-            if (!fullBorder && sublevel === "f") {
-                levelTitle = level - 2;
-            } else if (!fullBorder && sublevel === "d") {
-                levelTitle = level - 1;
+            if (sublevelTitles) {
+                levelTitle = sublevelTitles[sublevel];
             }
             const title = genTd(`${levelTitle}${sublevel}`, 1, false, fullBorder, boxes[sublevel]);
             const orbitals = [];
@@ -201,15 +199,16 @@ const orbitals = (function() {
         const wrapper1 = document.createElement("div");
         const wrapper2 = document.createElement("div");
 
-        const elevation = Object.keys(structure).reduce((acc, val) => {
-            const level = structure[val];
-            if (!level) return acc;
-            const maxSize = sublevelsSize(level) - 1;
-            return maxSize >= acc ? maxSize : Math.max(maxSize, acc - maxSize - 2);
-        }, 0);
-
-        if (elevation > 0 && type === "grid1") {
-            wrapper2.style = `padding-top: ${elevation * 2 + 2}em;`;
+        if (type === "grid1") {
+            const elevation = Object.keys(structure).reduce((acc, val) => {
+                const level = structure[val];
+                if (!level) return acc;
+                const maxSize = sublevelsSize(level) - 1;
+                return maxSize >= acc ? maxSize : Math.max(maxSize, acc - maxSize - 2);
+            }, 0);
+            if (elevation > 0) {
+                wrapper2.style = `padding-top: ${elevation * 2 + 2}em;`;
+            }
         }
 
         const maxLevel = Math.max(...Object.keys(structure));
@@ -235,16 +234,22 @@ const orbitals = (function() {
             } else {
                 const sublevels =
                     level <= maxLevel ? { s: rowSublevels["s"], p: rowSublevels["p"] } : {};
+                const sublevelTitles = { s: level, p: level };
                 let elevation = 0;
                 if (rows[i + 1] && rows[i + 1][0]["d"]) {
                     sublevels["d"] = rows[i + 1][0]["d"];
+                    sublevelTitles["d"] = rows[i + 1][1];
                     if (level <= maxLevel) elevation = 1;
                 }
                 if (rows[i + 2] && rows[i + 2][0]["f"]) {
                     sublevels["f"] = rows[i + 2][0]["f"];
+                    sublevelTitles["f"] = rows[i + 2][1];
                     if (level <= maxLevel) elevation = 3;
                 }
-                wrapper2.appendChild(genLevel(level, sublevels, elevation, false));
+                if (i < 3 && (sublevels["p"] || sublevels["d"])) {
+                    wrapper2.style = `padding-top: 2em;`;
+                }
+                wrapper2.appendChild(genLevel(level, sublevels, elevation, false, sublevelTitles));
             }
         });
 
